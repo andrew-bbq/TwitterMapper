@@ -6,12 +6,13 @@ import re
 import networkx as nx
 import matplotlib.pyplot as plt
 import math
-
+import json
 
 onlyfiles = [f for f in listdir("Data") if isfile(join("Data", f))]
 usernames = []
 references = {}
 totalinteractions = {}
+tweet_list = {}
 # set up data structures
 for filename in onlyfiles:
     username = filename.split("_user")[0]
@@ -23,6 +24,7 @@ for filename in onlyfiles:
 # we'll generate a graph from this later
 for filename in onlyfiles:
     username = filename.split("_user")[0]
+    tweet_list[username] = {}
     path = "./Data/"+filename
     wb_obj = openpyxl.load_workbook(path)
     sheet_obj = wb_obj.active
@@ -32,6 +34,9 @@ for filename in onlyfiles:
             for user in users:
                 if user in usernames and user != username:
                     totalinteractions[username] = totalinteractions[username] + 1
+                    if user not in tweet_list[username]:
+                        tweet_list[username][user] = []
+                    tweet_list[username][user].append("http://twitter.com/"+row[3]+"/status/"+row[0])
                     if user in references[username]:
                         references[username][user] = references[username][user]+1
                     else:
@@ -51,7 +56,7 @@ for user in usernames:
         union_count = references[user][ref_user] + ext_count
         total_count = totalinteractions[user] + totalinteractions[ref_user]
         jac_val = (union_count / total_count) * 100
-        if jac_val >= 2:
+        if jac_val >= 1:
             jaccard_values[user][ref_user] = jac_val
             jaccard_values[ref_user][user] = jac_val
 
@@ -77,8 +82,12 @@ for user in usernames:
 print(m)
 print(len(usernames))
 moved = 1
-while moved > 0:
+passes = 0
+while moved > 0 and passes < 75:
+    passes = passes + 1
     moved = 0
+    if len(communities) < 2:
+        break
     for username in usernames:
         adjacent = jaccard_values[username]
         highestNeighbor = None
@@ -115,16 +124,40 @@ while moved > 0:
                         break
                     else:
                         # UPDATE COMMUNITY CALCULATIONS HERE!!!!!
+                        sum_tot = 0
+                        sum_in = 0
                         for comm_user in communities[i]["users"]:
-                            placeholder = 0
+                            out_edges = jaccard_values[comm_user]
+                            # in edges will be added twice so we'll divide by two for them
+                            for edge in out_edges:
+                                if edge in communities[i]["users"]:
+                                    sum_in += (out_edges[edge] / 2)
+                                sum_tot += out_edges[edge]
+                            communities[i]["sum_out"] = sum_tot
+                            communities[i]["sum_in"] = sum_in
+            # add user to new community, update calculations
             for i in range(len(communities)):
                 if highestNeighbor in communities[i]["users"]:
                     communities[i]["users"].append(username)
                     # UPDATE COMMUNITY CALCULATIONS HERE!!!!!
+                    sum_tot = 0
+                    sum_in = 0
+                    for comm_user in communities[i]["users"]:
+                        out_edges = jaccard_values[comm_user]
+                        # in edges will be added twice so we'll divide by two for them
+                        for edge in out_edges:
+                            if edge in communities[i]["users"]:
+                                sum_in += (out_edges[edge] / 2)
+                            sum_tot += out_edges[edge]
+                        communities[i]["sum_out"] = sum_tot
+                        communities[i]["sum_in"] = sum_in
+            moved = 1
+
+
 for commune in communities:
     print(commune["users"])
 
-
+# MAKE GRAPH AND DISPLAY
 G = nx.Graph()
 # could do this in previous for loop, doing it here for clarity
 for user in jaccard_values:
@@ -141,3 +174,47 @@ nx.draw(G, pos=pos)
 label_options = {"ec": "k", "fc": "white", "alpha": 0.7}
 nx.draw_networkx_labels(G, pos, font_size=8, bbox=label_options)
 plt.show()
+
+# colors for nodes- add more if you have more groups
+colors = ["#4a87e8", "#e33d59", "#3ac959", "#FF00FF"]
+
+# convert our graph to json for sigma.js
+sigma_json = {}
+counter = 0
+visited = []
+sigma_json["nodes"] = []
+sigma_json["edges"] = []
+for username in usernames:
+    comm_number = 0
+    comm_counter = 0
+    for community in communities:
+        if username in community["users"]:
+            comm_number = comm_counter
+        else:
+            comm_counter += 1
+    user_node = {}
+    user_node["id"] = username
+    user_node["label"] = username
+    user_node["x"] = pos[username][0] * 4
+    user_node["y"] = pos[username][1] * 4
+    # will replace size with follower count later
+    user_node["size"] = 3
+    user_node["color"] = colors[comm_number]
+    sigma_json["nodes"].append(user_node)
+    for user2 in jaccard_values[username]:
+        if user2 not in visited:
+            user_edge = {}
+            user_edge["id"] = "e" + str(counter)
+            counter += 1
+            user_edge["source"] = username
+            user_edge["target"] = user2
+            user_edge["size"] = jaccard_values[username][user2]
+            sigma_json["edges"].append(user_edge)
+    visited.append(username)
+
+with open("graph.json", "w") as outfile:
+    json.dump(sigma_json, outfile)
+
+# throw our tweet map into a json too
+with open("tweets.json", "w") as outfile:
+    json.dump(tweet_list, outfile)

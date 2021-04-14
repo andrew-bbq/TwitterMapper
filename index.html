@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>TwitterMapper Graph</title>
+    <style type="text/css">
+        body {
+            margin: 0;
+            background-color: #0e0f12;
+            font-family: sans-serif;
+            color: white;
+        }
+        a:link{
+            color: white;
+        }
+        a:visited{
+            color: white;
+        }
+        #container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container"></div>
+    <div id="info" style="display: none; position: absolute; z-index: 1; width: 575px; height: 100vmax; background-color: #3d434a">
+        <div>
+            <span id="username" style="float: left; padding: 10px 20px 10px 10px; text-align: center;"></span>
+            <span style="float: right; padding: 10px 10px 10px 10px; cursor: pointer;" onclick="closeInfo()">X</span>
+            <div id="tweets" style="padding-top: 100px; width: 25vw; padding-left: 30px; height: 100%"></div>
+        </div>
+        <div
+    </div>
+    <script src="scripts/sigma.min.js"></script>
+    <script src="graph.json"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="tweets.json"></script>
+    <script>
+        let parsed = JSON.parse(data);
+        let parsedTweets = JSON.parse(tweet_data);
+        let s = new sigma(
+            {
+                renderer: {
+                    container: document.getElementById("container"),
+                    type: 'svg'
+                },
+                settings: {
+                    defaultLabelColor: "#b5b5b5"
+                }
+            }
+        );
+        s.graph.read(parsed);
+        s.refresh();
+        
+        function displayInteractionList(event) {
+            let nodeId = event.data.target.dataset.nodeId;
+            if (nodeId == undefined) {
+                return;
+            }
+            document.getElementById("info").style.display = "block";
+            document.getElementById("username").innerHTML = "<h2><a href='http://twitter.com/"+ nodeId.split("@")[1] +"'>"+nodeId+"</a></h2>";
+            let tweeted_users = parsedTweets[nodeId];
+            let tweetText = "";
+            for(user in tweeted_users){
+                tweetText += "<div>";
+                tweetText += user;
+                tweetText += "<ul>";
+                tweeted_users[user].forEach(tweet => {
+                    tweetText += "<li><a href='"+tweet+"'>" + tweet + "</a></li>";
+                });
+                tweetText += "</ul></div>";
+            }
+            document.getElementById("tweets").innerHTML = tweetText;
+            document.getElementById("info").style.height = document.getElementById("tweets").offsetHeight + "px";
+            console.log(document.getElementById("tweets").offsetHeight);
+        }
+        
+        function closeInfo() {
+            document.getElementById("info").style.display = "none";
+        }
+        s.bind('click', displayInteractionList);
+      </script>
+</body>
+</html>
