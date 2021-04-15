@@ -79,11 +79,9 @@ for user in usernames:
             m = m + jaccard_values[user2][user]
             jac_sum += jaccard_values[user2][user]
     communities.append({"users": [user], "out_edges": jaccard_values[user], "in_edges": {}, "sum_in": 0, "sum_out": jac_sum})
-print(m)
-print(len(usernames))
 moved = 1
 passes = 0
-while moved > 0 and passes < 75:
+while moved > 0 and passes < 600:
     passes = passes + 1
     moved = 0
     if len(communities) < 2:
@@ -176,7 +174,7 @@ nx.draw_networkx_labels(G, pos, font_size=8, bbox=label_options)
 plt.show()
 
 # colors for nodes- add more if you have more groups
-colors = ["#4a87e8", "#e33d59", "#3ac959", "#FF00FF"]
+colors = ["#4a87e8", "#e33d59", "#3ac959", "#d669d4"]
 
 # convert our graph to json for sigma.js
 sigma_json = {}
@@ -185,6 +183,8 @@ visited = []
 sigma_json["nodes"] = []
 sigma_json["edges"] = []
 for username in usernames:
+    if username not in pos:
+        continue
     comm_number = 0
     comm_counter = 0
     for community in communities:
@@ -195,8 +195,8 @@ for username in usernames:
     user_node = {}
     user_node["id"] = username
     user_node["label"] = username
-    user_node["x"] = pos[username][0] * 4
-    user_node["y"] = pos[username][1] * 4
+    user_node["x"] = pos[username][0] * 10
+    user_node["y"] = pos[username][1] * 10
     # will replace size with follower count later
     user_node["size"] = 3
     user_node["color"] = colors[comm_number]
@@ -208,13 +208,17 @@ for username in usernames:
             counter += 1
             user_edge["source"] = username
             user_edge["target"] = user2
-            user_edge["size"] = jaccard_values[username][user2]
+            user_edge["size"] = jaccard_values[username][user2] * 10
             sigma_json["edges"].append(user_edge)
     visited.append(username)
 
 with open("graph.json", "w") as outfile:
+    outfile.write("data = '")
     json.dump(sigma_json, outfile)
+    outfile.write("'")
 
 # throw our tweet map into a json too
 with open("tweets.json", "w") as outfile:
+    outfile.write("tweet_data = '")
     json.dump(tweet_list, outfile)
+    outfile.write("'")

@@ -9,6 +9,4 @@ pip install matplotlib, openpyxl, networkx
 
 run ```python excelparser.py```
 
-To make index.html display your graph, add the following to the generated "graph.json": at the beginning, add "data ='" and at the end, add "'"
-
-To include tweets, add the following to the generated "tweets.json": at the beginning, add "tweet_data = '" and at the end, add "'"
+You can now view your graph on index.html

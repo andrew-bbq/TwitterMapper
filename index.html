@@ -75,7 +75,7 @@
                 tweetText += "</ul></div>";
             }
             document.getElementById("tweets").innerHTML = tweetText;
-            document.getElementById("info").style.height = document.getElementById("tweets").offsetHeight + "px";
+            document.getElementById("info").style.height = (document.getElementById("tweets").offsetHeight +50) + "px";
             console.log(document.getElementById("tweets").offsetHeight);
         }
         
